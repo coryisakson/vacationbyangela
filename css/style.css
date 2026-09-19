@@ -1155,6 +1155,17 @@ h1, h2, h3, h4 {
   gap: 1.2rem;
 }
 
+/* Honeypot anti-spam field: visually hidden from humans but present in the DOM for bots */
+.hp-field {
+  position: absolute !important;
+  left: -9999px !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .form-group {
   display: flex;
   flex-direction: column;

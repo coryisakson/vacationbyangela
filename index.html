@@ -650,6 +650,13 @@
           </p>
 
           <form id="tripInquiryForm">
+            <!-- Honeypot: hidden from humans, visible to bots. If filled, the submission is silently dropped. -->
+            <div class="hp-field" aria-hidden="true">
+              <label for="company_website">Website</label>
+              <input type="text" id="company_website" name="company_website" tabindex="-1" autocomplete="off" placeholder="Leave this field empty">
+            </div>
+            <input type="hidden" id="form_sent_timestamp" name="sent_timestamp">
+
             <div class="form-grid">
               <!-- Full Name -->
               <div class="form-group full-width">

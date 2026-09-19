@@ -61,11 +61,36 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 4. Contact Form Submission Handling
+  //    Posts to a Google Apps Script Web App (invisible to the customer).
+  //    The script logs the entry to a Google Sheet and emails Angela.
   const contactForm = document.getElementById('tripInquiryForm');
   const formFeedback = document.getElementById('formFeedback');
 
+  // 👉 PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW
+  const FORM_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxQTMEGV5h7C1yIG8-ydBdg8Dc1_e3B1PtXcC5Hq3d2GBjAS7X5cuxjNIFlqbeQrUs/exec';
+
+  function showFeedback(ok, name) {
+    if (!formFeedback) return;
+    formFeedback.className = 'form-feedback ' + (ok ? 'success' : 'error');
+    formFeedback.style.display = 'block';
+    if (ok) {
+      formFeedback.innerHTML = `
+        <strong>Thank you, ${name}!</strong><br>
+        Your vacation request has been received. Angela will be in touch within 24 hours
+        to start dreaming up your perfect getaway.
+      `;
+    } else {
+      formFeedback.innerHTML = `
+        <strong>Something went wrong.</strong><br>
+        Please try again in a moment, or call/text Angela directly at
+        <a href="tel:+12086294229" style="font-weight:700;">+1-208-629-4229</a>.
+      `;
+    }
+    formFeedback.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
   if (contactForm) {
-    contactForm.addEventListener('submit', (e) => {
+    contactForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
       const name = document.getElementById('clientName').value.trim();
@@ -77,51 +102,47 @@ document.addEventListener('DOMContentLoaded', () => {
       const tripStyle = document.getElementById('tripStyle').value;
       const notes = document.getElementById('tripNotes').value.trim();
 
+      // Honeypot: if a bot filled the hidden field, pretend success and drop it.
+      const honeypot = document.getElementById('website_hp')?.value || '';
+
       // Simple validation
-      if (!name) {
-        alert('Please enter your name.');
-        return;
-      }
-      if (preferred === 'email' && !email) {
-        alert('Please provide your email address.');
-        return;
-      }
-      if (preferred === 'phone' && !phone) {
-        alert('Please provide your phone number.');
-        return;
-      }
+      if (!name) { alert('Please enter your name.'); return; }
+      if (preferred === 'email' && !email) { alert('Please provide your email address.'); return; }
+      if (preferred === 'phone' && !phone) { alert('Please provide your phone number.'); return; }
 
-      // Build email mailto link to Angela
-      const recipient = 'angela.fabulousindeedvac@gmail.com';
-      const subject = encodeURIComponent(`Vacation Inquiry: ${name} - ${destination || 'Custom Getaway'}`);
-      const body = encodeURIComponent(
-        `Hello Angela,\n\nI would love your help planning a custom vacation!\n\n` +
-        `Name: ${name}\n` +
-        `Preferred Contact: ${preferred.toUpperCase()}\n` +
-        `Email: ${email || 'N/A'}\n` +
-        `Phone: ${phone || 'N/A'}\n` +
-        `Destination / Region: ${destination || 'Not specified'}\n` +
-        `Target Dates / Season: ${timeframe || 'Flexible'}\n` +
-        `Travel Vibe: ${tripStyle}\n\n` +
-        `Notes & Wishlist:\n${notes || 'No extra notes'}\n\n` +
-        `Sent from VacationByAngela.com`
-      );
+      const submitBtn = contactForm.querySelector('.form-submit-btn');
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Sending…'; }
 
-      // Show confirmation UI
-      if (formFeedback) {
-        formFeedback.className = 'form-feedback success';
-        formFeedback.innerHTML = `
-          <strong>Thank you, ${name}!</strong><br>
-          Your vacation request details are ready. An email window will open so you can send your inquiry straight to Angela (<a href="mailto:${recipient}" style="color:#065f46;text-decoration:underline;">${recipient}</a>). You can also call or text Angela directly at <a href="tel:+12086294229" style="color:#065f46;font-weight:700;">+1-208-629-4229</a>!
-        `;
-        formFeedback.style.display = 'block';
+      try {
+        if (honeypot) {
+          // Bot detected — do NOT send, just show a fake success.
+          contactForm.reset();
+          showFeedback(true, name);
+          return;
+        }
+
+        const payload = {
+          name, preferred, email, phone,
+          destination, timeframe, tripStyle, notes
+        };
+
+        // Use text/plain to trigger a "simple" CORS request (no preflight),
+        // which Google Apps Script can handle without custom header setup.
+        const res = await fetch(FORM_ENDPOINT, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+
+        contactForm.reset();
+        showFeedback(true, name);
+      } catch (err) {
+        console.error('Form submission error:', err);
+        showFeedback(false, name);
+      } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Send My Inquiry'; }
       }
-
-      // Open email client
-      window.location.href = `mailto:${recipient}?subject=${subject}&body=${body}`;
-
-      // Reset form
-      contactForm.reset();
     });
   }
 
