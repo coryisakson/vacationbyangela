@@ -285,4 +285,110 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCarousel();
     startAutoPlay();
   }
+
+  // 6. Partner Portals Carousels (Interactive tabs, arrows, dots & swipe for multi-option cards)
+  const partnerCarousels = document.querySelectorAll('[data-partner-carousel]');
+
+  partnerCarousels.forEach((carouselEl) => {
+    const track = carouselEl.querySelector('.partner-carousel-track');
+    const slides = Array.from(carouselEl.querySelectorAll('.partner-carousel-slide'));
+    const prevBtn = carouselEl.querySelector('.partner-nav-btn.prev');
+    const nextBtn = carouselEl.querySelector('.partner-nav-btn.next');
+    const dotsContainer = carouselEl.querySelector('.partner-dots');
+    const tabs = Array.from(carouselEl.querySelectorAll('.partner-tab'));
+
+    if (!track || slides.length <= 1) return;
+
+    let currentIndex = 0;
+    const totalSlides = slides.length;
+
+    function buildDots() {
+      if (!dotsContainer) return;
+      dotsContainer.innerHTML = '';
+      slides.forEach((_, idx) => {
+        const dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = `partner-dot ${idx === 0 ? 'active' : ''}`;
+        dot.setAttribute('aria-label', `Go to option ${idx + 1}`);
+        dot.addEventListener('click', () => goToPartnerSlide(idx));
+        dotsContainer.appendChild(dot);
+      });
+    }
+
+    function updateCarousel() {
+      track.style.transform = `translateX(-${currentIndex * 100}%)`;
+
+      if (dotsContainer) {
+        const dots = dotsContainer.querySelectorAll('.partner-dot');
+        dots.forEach((dot, idx) => {
+          dot.classList.toggle('active', idx === currentIndex);
+        });
+      }
+
+      tabs.forEach((tab, idx) => {
+        const isActive = idx === currentIndex;
+        tab.classList.toggle('active', isActive);
+        tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
+    }
+
+    function goToPartnerSlide(index) {
+      if (index < 0) {
+        currentIndex = totalSlides - 1;
+      } else if (index >= totalSlides) {
+        currentIndex = 0;
+      } else {
+        currentIndex = index;
+      }
+      updateCarousel();
+    }
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        goToPartnerSlide(currentIndex - 1);
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        goToPartnerSlide(currentIndex + 1);
+      });
+    }
+
+    tabs.forEach((tab, idx) => {
+      tab.addEventListener('click', (e) => {
+        e.preventDefault();
+        goToPartnerSlide(idx);
+      });
+    });
+
+    // Touch swipe support
+    let startX = 0;
+    let isTouching = false;
+
+    track.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+      isTouching = true;
+    }, { passive: true });
+
+    track.addEventListener('touchend', (e) => {
+      if (!isTouching) return;
+      const endX = e.changedTouches[0].clientX;
+      const diff = startX - endX;
+      if (Math.abs(diff) > 35) {
+        if (diff > 0) {
+          goToPartnerSlide(currentIndex + 1);
+        } else {
+          goToPartnerSlide(currentIndex - 1);
+        }
+      }
+      isTouching = false;
+    }, { passive: true });
+
+    buildDots();
+    updateCarousel();
+  });
 });
+
